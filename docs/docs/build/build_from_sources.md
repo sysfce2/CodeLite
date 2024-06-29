@@ -57,15 +57,14 @@ cd build-release/install
 
 ## Linux
 ----
-
-- To build CodeLite on your computer you will first need to [Build wxWidgets from sources][6]
+- To build CodeLite on your computer you will first need to install wXWidget 3.1+ (sudo apt install libwxgtk3.2-dev libgtk-3-dev) or [Build wxWidgets from sources][6]
 - Install `libssh-dev` and `libsqlite3-dev` packages (or similar, depending on your distro). On **Ubuntu / Debian**, you can use this command:
 
 ```bash
     sudo apt install build-essential            \
                      git cmake flex             \
                      libssh-dev libsqlite3-dev  \
-                     libpcre2-dev
+                     libpcre2-dev bison flex
 ```
 
 - Git clone the sources:
@@ -108,6 +107,7 @@ Prerequisites:
  - Xcode command-line tools
  - Homebrew
  - Flex
+ - autoconf
 
 Preparation:
 
@@ -124,11 +124,13 @@ Preparation:
 
 ```bash
 brew update
-brew install git \
-             cmake \
-             libssh \
-             hunspell \
-             flex
+brew install git        \
+             cmake      \
+             flex       \
+             autoconf   \
+             automake   \
+             libtool    \
+             gettext
 ```
 
  - Usually, `brew` will install everything under `/opt/homebrew`, so run this from the terminal:

@@ -40,6 +40,8 @@ extern "C" int yywrap(void*) { return 1; }
     return x;\
 }
 
+int bracket_count = 0;
+
 %}
 
 /* regex and modes */
@@ -55,6 +57,7 @@ extern "C" int yywrap(void*) { return 1; }
 %x HEREDOC
 %x DSTRING
 %x SINGLE_STRING
+%x ATTRIBUTE
 
 identifier [a-zA-Z_][0-9a-zA-Z_]*
 
@@ -196,6 +199,24 @@ horizontal_white [ ]|{h_tab}
         userData->AppendToComment(yytext[0]);
     }
 }
+<PHP>"#[" {
+    BEGIN(ATTRIBUTE);
+    bracket_count = 1;
+}
+<ATTRIBUTE>"[" {
+    bracket_count++;
+}
+<ATTRIBUTE>"]" {
+    bracket_count--;
+    if (bracket_count == 0) {
+        BEGIN(PHP);
+        return ATTRIBUTE;
+    }
+}
+<ATTRIBUTE>"\n" {
+}
+<ATTRIBUTE>. {
+}
 
 <PHP>"//"|"#" { 
     BEGIN(CPP_COMMENT); 
@@ -260,11 +281,13 @@ horizontal_white [ ]|{h_tab}
 <PHP>"goto"                 {LEX_RETURN(kPHP_T_GOTO);}
 <PHP>"echo"                 {LEX_RETURN(kPHP_T_ECHO);}
 <PHP>"print"                {LEX_RETURN(kPHP_T_PRINT);}
+<PHP>"enum"                 {LEX_RETURN(kPHP_T_ENUM);}
 <PHP>"class"                {LEX_RETURN(kPHP_T_CLASS);}
 <PHP>"interface"            {LEX_RETURN(kPHP_T_INTERFACE);}
 <PHP>"trait"                {LEX_RETURN(kPHP_T_TRAIT);}
 <PHP>"extends"              {LEX_RETURN(kPHP_T_EXTENDS);}
 <PHP>"implements"           {LEX_RETURN(kPHP_T_IMPLEMENTS);}
+<PHP>"?->"                  {LEX_RETURN(kPHP_T_OBJECT_OPERATOR);}
 <PHP>"->"                   {LEX_RETURN(kPHP_T_OBJECT_OPERATOR);}
 <PHP>"::"                   {LEX_RETURN(kPHP_T_PAAMAYIM_NEKUDOTAYIM);}
 <PHP>\\                     {LEX_RETURN(kPHP_T_NS_SEPARATOR);}

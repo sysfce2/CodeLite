@@ -26,7 +26,7 @@
 #include "app.h"
 
 #include "ColoursAndFontsManager.h"
-#include "CompilerLocatorCygwin.h"
+#include "CompilerLocator/CompilerLocatorCygwin.h"
 #include "SideBar.hpp"
 #include "SocketAPI/clSocketClient.h"
 #include "autoversion.h"
@@ -37,7 +37,7 @@
 #include "conffilelocator.h"
 #include "editor_config.h"
 #include "environmentconfig.h"
-#include "evnvarlist.h"
+#include "envvarlist.h"
 #include "file_logger.h"
 #include "fileexplorer.h"
 #include "fileextmanager.h"
@@ -628,7 +628,7 @@ bool CodeLiteApp::OnInit()
     // Set environment variable for CodeLiteDir (make it first
     // on the list so it can be used by other variables)
     //---------------------------------------------------------
-    EvnVarList vars;
+    EnvVarList vars;
     EnvironmentConfig::Instance()->Load();
     EnvironmentConfig::Instance()->ReadObject(wxT("Variables"), &vars);
 
@@ -842,6 +842,11 @@ bool CodeLiteApp::IsSingleInstance(const wxCmdLineParser& m_parser)
 
                 JSON json(cJSON_Object);
                 json.toElement().addProperty("args", files);
+
+                long lineNumber(0);
+                m_parser.Found(wxT("l"), &lineNumber);
+                json.toElement().addProperty("lineno", lineNumber);
+
                 client.WriteMessage(json.toElement().format());
                 return false;
 
@@ -869,7 +874,7 @@ void CodeLiteApp::MSWReadRegistry()
 {
 #ifdef __WXMSW__
 
-    EvnVarList vars;
+    EnvVarList vars;
     EnvironmentConfig::Instance()->Load();
     EnvironmentConfig::Instance()->ReadObject(wxT("Variables"), &vars);
 

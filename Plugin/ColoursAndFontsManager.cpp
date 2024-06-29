@@ -350,6 +350,7 @@ LexerConf::Ptr_t ColoursAndFontsManager::GetLexerForFile(const wxString& filenam
             lexerByContent = GetLexer("script");
             break;
         case FileExtManager::TypeJS:
+        case FileExtManager::TypeTypeScript:
             lexerByContent = GetLexer("javascript");
             break;
         case FileExtManager::TypePhp:
@@ -728,10 +729,18 @@ LexerConf::Ptr_t ColoursAndFontsManager::DoAddLexer(JSONItem json)
         lexer->SetFileSpec(filespec);
     }
 
+    if (lexer->GetName() == "javascript") {
+        AddLexerKeywords(lexer, 0, { "async", "await" });
+    }
+
     // Hack: fix Java lexer which is using the same
     // file extensions as C++...
     if (lexer->GetName() == "java" && lexer->GetFileSpec().Contains(".cpp")) {
         lexer->SetFileSpec("*.java");
+    }
+
+    if (lexer->GetName() == "java") {
+        AddLexerKeywords(lexer, 0, { "async", "await", "enum" });
     }
 
     // Append *.sqlite to the SQL lexer if missing

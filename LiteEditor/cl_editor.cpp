@@ -2075,7 +2075,7 @@ wxChar clEditor::PreviousChar(const int& pos, int& foundPos, bool wantWhitespace
     while (true) {
         ch = GetCharAt(curpos);
         if (ch == wxT('\t') || ch == wxT(' ') || ch == wxT('\r') || ch == wxT('\v') || ch == wxT('\n')) {
-            // if the caller is intrested in whitepsaces,
+            // if the caller is interested in whitespaces,
             // simply return it
             if (wantWhitespace) {
                 foundPos = curpos;
@@ -6596,7 +6596,10 @@ void clEditor::OnIdle(wxIdleEvent& event)
 
     // Always update the status bar with event, calling it directly causes performance degredation
     m_mgr->GetStatusBar()->SetLinePosColumn(message);
-
+    
+#if defined(__WXGTK__)
+    m_mgr->GetStatusBar()->Refresh();
+#endif
     GetContext()->ProcessIdleActions();
 }
 

@@ -46,8 +46,6 @@
 #include "bookmark_manager.h"
 #include "build_custom_targets_menu_manager.h"
 #include "build_settings_config.h"
-#include "builder.h"
-#include "buildmanager.h"
 #include "buildtabsettingsdata.h"
 #include "clAboutDialog.h"
 #include "clBootstrapWizard.h"
@@ -3954,7 +3952,13 @@ void clMainFrame::OnSingleInstanceOpenFiles(clCommandEvent& e)
             OnSwitchWorkspace(workspaceEvent);
 
         } else {
-            GetMainBook()->OpenFile(files.Item(i), wxEmptyString);
+            long lineNumber = e.GetLineNumber();
+            if (lineNumber > 0) {
+                lineNumber--;
+            } else {
+                lineNumber = 0;
+            }
+            GetMainBook()->OpenFile(files.Item(i), wxEmptyString, lineNumber);
         }
     }
 
@@ -4308,7 +4312,7 @@ void clMainFrame::OnOpenShellFromFilePath(wxCommandEvent& e)
     DirSaver ds;
     wxSetWorkingDirectory(filepath);
 
-    // Apply the environment variabels before opening the shell
+    // Apply the environment variables before opening the shell
     EnvSetter setter;
     FileUtils::OpenTerminal(filepath);
 }
@@ -4940,7 +4944,7 @@ void clMainFrame::SelectBestEnvSet()
 
     wxString globalActiveSet = "Default";
     wxString activeSetName;
-    EvnVarList vars = EnvironmentConfig::Instance()->GetSettings();
+    EnvVarList vars = EnvironmentConfig::Instance()->GetSettings();
 
     // By default, use the global one
     activeSetName = globalActiveSet;
@@ -5258,7 +5262,7 @@ void clMainFrame::DoCreateBuildDropDownMenu(wxMenu* menu)
             clCxxWorkspaceST::Get()->GetProjBuildConf(clCxxWorkspaceST::Get()->GetActiveProjectName(), "");
         if (bldcfg && bldcfg->IsCustomBuild()) {
 
-            // Update teh custom targets
+            // Update the custom targets
             CustomTargetsMgr::Get().SetTargets(clCxxWorkspaceST::Get()->GetActiveProjectName(),
                                                bldcfg->GetCustomTargets());
 
