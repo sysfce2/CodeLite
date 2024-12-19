@@ -18,6 +18,7 @@
 #include "wxTerminalInputCtrl.hpp"
 
 #include <wx/menu.h>
+#include <wx/msgdlg.h>
 #include <wx/sizer.h>
 #include <wx/uiaction.h>
 #include <wx/wupdlock.h>
@@ -41,6 +42,24 @@ public:
         CHECK_PTR_RET(m_input_ctrl);
         m_input_ctrl->Paste();
     }
+
+    void OnCopy(wxCommandEvent& event) override
+    {
+        CHECK_FOCUS_WINDOW();
+        CHECK_PTR_RET(m_stc);
+        if (!m_stc->CanCopy()) {
+            return;
+        }
+
+        wxString text = m_stc->GetSelectedText();
+        if (text.empty()) {
+            return;
+        }
+        wxString modbuffer;
+        StringUtils::StripTerminalColouring(text, modbuffer);
+
+        ::CopyToClipboard(modbuffer);
+    }
 };
 
 struct EditorEnabler {
@@ -62,8 +81,11 @@ wxTerminalOutputCtrl::wxTerminalOutputCtrl(wxWindow* parent, wxWindowID winid)
     m_editEvents = std::make_unique<MyEventsHandler>(nullptr, m_ctrl);
 }
 
-wxTerminalOutputCtrl::wxTerminalOutputCtrl(wxTerminalCtrl* parent, wxWindowID winid, const wxFont& font,
-                                           const wxColour& bg_colour, const wxColour& text_colour)
+wxTerminalOutputCtrl::wxTerminalOutputCtrl(wxTerminalCtrl* parent,
+                                           wxWindowID winid,
+                                           const wxFont& font,
+                                           const wxColour& bg_colour,
+                                           const wxColour& text_colour)
     : wxWindow(parent, winid)
     , m_terminal(parent)
 {
@@ -87,7 +109,8 @@ void wxTerminalOutputCtrl::Initialise(const wxFont& font, const wxColour& bg_col
         m_ctrl->SetMarginWidth(i, 0);
     }
 
-    m_ctrl->UsePopUp(1);
+    m_ctrl->UsePopUp(0);
+    m_ctrl->Bind(wxEVT_CONTEXT_MENU, &wxTerminalOutputCtrl::OnMenu, this);
     m_ctrl->SetLexer(wxSTC_LEX_CONTAINER);
     m_ctrl->SetWrapMode(wxSTC_WRAP_CHAR);
     m_ctrl->SetEditable(false);
@@ -269,6 +292,14 @@ void wxTerminalOutputCtrl::ProcessIdle()
     int pos = m_ctrl->PositionFromPoint(client_pt);
     int word_start_pos = m_ctrl->WordStartPosition(pos, true);
     int word_end_pos = m_ctrl->WordEndPosition(pos, true);
+
+    // Make sure we only pick visible chars (embedded ANSI colour can break the selected word)
+    for (; word_start_pos < word_end_pos; word_start_pos++) {
+        if (m_ctrl->StyleGetVisible(m_ctrl->GetStyleAt(word_start_pos))) {
+            break;
+        }
+    }
+
     IndicatorRange range{ word_start_pos, word_end_pos };
     if (m_indicatorHyperlink.ok() && m_indicatorHyperlink == range) {
         // already marked
@@ -304,7 +335,9 @@ void wxTerminalOutputCtrl::OnLeftUp(wxMouseEvent& event)
 
     // fire an event
     wxString pattern = m_ctrl->GetTextRange(m_indicatorHyperlink.start(), m_indicatorHyperlink.end());
-    CallAfter(&wxTerminalOutputCtrl::DoPatternClicked, pattern);
+    wxString modbuffer;
+    StringUtils::StripTerminalColouring(pattern, modbuffer);
+    CallAfter(&wxTerminalOutputCtrl::DoPatternClicked, modbuffer);
 }
 
 void wxTerminalOutputCtrl::OnEnterWindow(wxMouseEvent& event)
@@ -413,4 +446,57 @@ void wxTerminalOutputCtrl::DoPatternClicked(const wxString& pattern)
         editor->SetActive();
     };
     clGetManager()->OpenFileAndAsyncExecute(file, std::move(cb));
+}
+
+void wxTerminalOutputCtrl::OnMenu(wxContextMenuEvent& event)
+{
+    wxUnusedVar(event);
+    wxMenu menu;
+    menu.Append(wxID_COPY);
+    menu.Append(XRCID("copy-with-ansi-colors"), _("Copy with Terminal Colours"));
+    menu.AppendSeparator();
+    menu.Append(wxID_SELECTALL);
+    menu.AppendSeparator();
+    menu.Append(wxID_CLEAR);
+
+    menu.Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent& event) {
+            wxUnusedVar(event);
+            wxString text = m_ctrl->GetSelectedText();
+            if (text.empty()) {
+                return;
+            }
+
+            wxString modbuffer;
+            StringUtils::StripTerminalColouring(text, modbuffer);
+            ::CopyToClipboard(modbuffer);
+        },
+        wxID_COPY);
+    menu.Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent& event) {
+            wxUnusedVar(event);
+            wxString text = m_ctrl->GetSelectedText();
+            if (text.empty()) {
+                return;
+            }
+            ::CopyToClipboard(text);
+        },
+        XRCID("copy-with-ansi-colors"));
+    menu.Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent& event) {
+            wxUnusedVar(event);
+            m_ctrl->SelectAll();
+        },
+        wxID_SELECTALL);
+    menu.Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent& event) {
+            wxUnusedVar(event);
+            Clear();
+        },
+        wxID_CLEAR);
+    PopupMenu(&menu);
 }

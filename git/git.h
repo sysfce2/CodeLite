@@ -50,9 +50,14 @@
 #include <set>
 #include <vector>
 #include <wx/progdlg.h>
+#if USE_SFTP
+#include "cl_ssh.h"
+#endif
 
 class clTreeCtrl;
 class clCommandProcessor;
+
+#define GIT_TAB_NAME "Git"
 
 class gitAction
 {
@@ -178,14 +183,17 @@ class GitPlugin : public IPlugin
     wxString m_codeliteRemoteScriptPath;
     bool m_isEnabled = false;
     bool m_commitDialogIsShown = false;
+#if USE_SFTP
+    clSSH::Ptr_t m_ssh;
+#endif
 
 private:
     void StartCodeLiteRemote();
     void ClearCodeLiteRemoteInfo();
     void DoShowDiffViewer(const wxString& headFile, const wxString& fileName);
     void DoExecuteCommands(const GitCmd::Vec_t& commands, const wxString& workingDir);
-    bool DoExecuteCommandSync(const wxString& command, wxString* commandOutput,
-                              const wxString& workingDir = wxEmptyString);
+    bool
+    DoExecuteCommandSync(const wxString& command, wxString* commandOutput, const wxString& workingDir = wxEmptyString);
 
     void DoSetTreeItemImage(clTreeCtrl* ctrl, const wxTreeItemId& item, OverlayTool::BmpType bmpType) const;
     void InitDefaults();
@@ -296,13 +304,19 @@ public:
     /**
      * @brief create git process and return the process handle
      */
-    IProcess* AsyncRunGit(wxEvtHandler* handler, const wxString& git_args, size_t create_flags,
-                          const wxString& working_directory, bool logMessage = false);
+    IProcess* AsyncRunGit(wxEvtHandler* handler,
+                          const wxString& git_args,
+                          size_t create_flags,
+                          const wxString& working_directory,
+                          bool logMessage = false);
     /**
      * @brief create a git process and direct the output to a callback
      */
-    void AsyncRunGitWithCallback(const wxString& git_args, std::function<void(const wxString&)> callback,
-                                 size_t create_flags, const wxString& working_directory, bool logMessage = false);
+    void AsyncRunGitWithCallback(const wxString& git_args,
+                                 std::function<void(const wxString&)> callback,
+                                 size_t create_flags,
+                                 const wxString& working_directory,
+                                 bool logMessage = false);
     /**
      * @brief is git enabled for the current workspace?
      */
